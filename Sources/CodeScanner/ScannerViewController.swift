@@ -414,14 +414,21 @@ extension CodeScannerView {
             Date().timeIntervalSince(lastTime) <= 0.5
         }
 
-        func found(_ result: ScanResult) {
+        func found(_ results: [ScanResult]) {
             lastTime = Date()
 
             if parentView.shouldVibrateOnSuccess {
                 AudioServicesPlaySystemSound(SystemSoundID(kSystemSoundID_Vibrate))
             }
 
-            parentView.completion(.success(result))
+            // Call completion for each result individually to maintain backward compatibility
+            for result in results {
+                parentView.completion(.success(result))
+            }
+        }
+
+        func found(_ result: ScanResult) {
+            found([result])
         }
 
         func didFail(reason: ScanError) {
@@ -457,40 +464,43 @@ extension CodeScannerView.ScannerViewController: AVCaptureMetadataOutputObjectsD
         handler = { [weak self] image in
             guard let self else { return }
 
-            // Process each detected result
-            for result in validResults {
-                // If we have an image from photo capture, apply it to all results
-                let finalResult = image != nil ? ScanResult(string: result.string, type: result.type, image: image, corners: result.corners) : result
+            // Apply image to all results if available
+            let finalResults = validResults.map { result -> ScanResult in
+                return image != nil ? ScanResult(string: result.string, type: result.type, image: image, corners: result.corners) : result
+            }
 
-                switch parentView.scanMode {
-                case .once:
-                    found(finalResult)
-                    // make sure we only trigger scan once per use
+            switch parentView.scanMode {
+            case .once:
+                found(finalResults)
+                // make sure we only trigger scan once per use
+                didFinishScanning = true
+                return
+
+            case .manual:
+                if !didFinishScanning, isWithinManualCaptureInterval {
+                    found(finalResults)
                     didFinishScanning = true
-                    return // Only process first result for .once mode
+                    return
+                }
 
-                case .manual:
-                    if !didFinishScanning, isWithinManualCaptureInterval {
-                        found(finalResult)
-                        didFinishScanning = true
-                        return // Only process first result for .manual mode
+            case .oncePerCode:
+                let newResults = finalResults.filter { !codesFound.contains($0.string) }
+                if !newResults.isEmpty {
+                    for result in newResults {
+                        codesFound.insert(result.string)
                     }
+                    found(newResults)
+                }
 
-                case .oncePerCode:
-                    if !codesFound.contains(finalResult.string) {
-                        codesFound.insert(finalResult.string)
-                        found(finalResult)
-                    }
+            case .continuous:
+                if isPastScanInterval {
+                    found(finalResults)
+                }
 
-                case .continuous:
-                    if isPastScanInterval {
-                        found(finalResult)
-                    }
-
-                case .continuousExcept(let ignoredList):
-                    if isPastScanInterval, !ignoredList.contains(finalResult.string) {
-                        found(finalResult)
-                    }
+            case .continuousExcept(let ignoredList):
+                let filteredResults = finalResults.filter { !ignoredList.contains($0.string) }
+                if isPastScanInterval && !filteredResults.isEmpty {
+                    found(filteredResults)
                 }
             }
         }

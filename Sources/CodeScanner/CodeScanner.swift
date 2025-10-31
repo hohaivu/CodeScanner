@@ -20,8 +20,8 @@ public enum ScanError: Error {
 
     /// Initialization failed.
     case initError(_ error: Error)
-  
-    /// The camera permission is denied 
+
+    /// The camera permission is denied
     case permissionDenied
 }
 
@@ -35,10 +35,10 @@ public struct ScanResult {
 
     /// The type of code that was matched.
     public let type: AVMetadataObject.ObjectType
-    
+
     /// The image of the code that was matched
     public let image: UIImage?
-  
+
     /// The corner coordinates of the scanned code.
     public let corners: [CGPoint]
 }
@@ -76,7 +76,7 @@ public enum ScanMode {
 /// For testing inside the simulator, set the `simulatedData` property to some test data you want to send back.
 @available(macCatalyst 14.0, *)
 public struct CodeScannerView: UIViewControllerRepresentable {
-    
+
     public let codeTypes: [AVMetadataObject.ObjectType]
     public let scanMode: ScanMode
     public let manualSelect: Bool
@@ -134,7 +134,7 @@ public struct CodeScannerView: UIViewControllerRepresentable {
             isManualSelect: manualSelect
         )
     }
-    
+
 }
 
 @available(macCatalyst 14.0, *)
