@@ -484,7 +484,7 @@ extension CodeScannerView.ScannerViewController: AVCaptureMetadataOutputObjectsD
                 }
 
             case .oncePerCode:
-                let newResults = finalResults.filter { !codesFound.contains($0.string) }
+                let newResults = finalResults.filter { !self.codesFound.contains($0.string) }
                 if !newResults.isEmpty {
                     for result in newResults {
                         codesFound.insert(result.string)
